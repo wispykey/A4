@@ -1,8 +1,9 @@
 import numpy
 import random
+
 class Genetic():
     def __init__(self, fitness_fn) -> None:
-        self.fitness_fn = fitness_fn # A given fitness function
+        self.fitness_fn = fitness_fn # The given fitness function
         self.generation_number = 0
 
     # Creates n generations given an initial population 
@@ -10,13 +11,13 @@ class Genetic():
         print("\nGeneration:", self.generation_number, "\n")
 
         next_generation = []
-
         weights = tuple(self.calculate_probabilities(population))
         
-        for i in range(len(population) // 2): # Chosen to maintain constant population size
+        for i in range(len(population) // 2):
             print("SELECTING...")
 
             parents = self.select_parents(population, weights)
+            
             print("Parent 1: ", parents[0])
             print("Parent 2: ", parents[1])
 
@@ -31,46 +32,59 @@ class Genetic():
         
         return None
 
+    # Select parents based on weighted probabilities
     def select_parents(self, population, weights) -> list:
         parent1 = random.choices(population, weights, k=1)
         parent2 = random.choices(population, weights, k=1) 
-        while (parent2 == parent1):
-            parent2 = random.choices(population, weights, k=1) # Reroll until parents are different
-        return numpy.concatenate((parent1, parent2))
 
+        while (parent2 == parent1):
+            # Reroll until parents are different
+            parent2 = random.choices(population, weights, k=1)
+
+        return numpy.concatenate((parent1, parent2))
+    
+    # Creates new children based on parents
     def reproduce_children(self, parents) -> list:
         num_variables = len(parents[0])
-        crossover_point = crossover_point = random.randrange(1, num_variables)
+         # The crossover point is interpreted as inclusive to first child
+        crossover_point = random.randrange(1, num_variables)
 
         print("REPRODUCING...")
-        print("Crossover point:", chr(crossover_point + 64)) # The crossover point is inclusive to first child
+        print("Crossover point:", chr(crossover_point + 65 - 1))
 
         child1 = self.produce_child(parents, crossover_point, num_variables)
         child2 = self.produce_child(parents[::-1], crossover_point, num_variables) 
+
         return [child1, child2]
     
+    # Creates a new child by splicing the parents together
     def produce_child(self, parents, crossover_point, num_variables) -> object:
         child = {}
+
         for i in range(0, crossover_point):
             letter = chr(i + 65)
             child[letter] = parents[0][letter]
         for j in range(crossover_point, num_variables):
             letter = chr(j + 65)
             child[letter] = parents[1][letter]
+
         return child
     
+    # Attempts to mutate a single variable from each child
     def mutate_children(self, children) -> list:
         for i in range(len(children)):
-            if (random.randrange(100) <= 30):                               # Mimic a 30% probability of mutation
-                mutate_index = chr(random.randrange(len(children[0])) + 65) # Pick a random variable to mutate
-                mutate_value = random.choice([1,2,3,4])                     # Hard-coded domain
-                while (mutate_value == children[i][mutate_index]):          
-                    mutate_value = random.choice([1,2,3,4])                 # Reroll until new value is different
+            if (random.randrange(100) <= 30): # Mimic a 30% probability of mutation
+                mutate_variable = chr(random.randrange(len(children[0])) + 65)
+                mutate_value = random.choice([1,2,3,4]) # Hard-coded domain
+                
+                while (mutate_value == children[i][mutate_variable]):          
+                    mutate_value = random.choice([1,2,3,4]) # Reroll until different                  
 
                 print("Mutation in Child " + str(i + 1) + "!", end=" ") 
-                print("Changed", mutate_index, "from", children[i][mutate_index], "to", mutate_value)
+                print("Changed", mutate_variable, "from", 
+                      children[i][mutate_variable], "to", mutate_value)
 
-                children[i][mutate_index] = mutate_value                    # Change the value
+                children[i][mutate_variable] = mutate_value              
             
             print("Child  " + str(i + 1) + ": ", children[i])
         print("\n")
@@ -89,7 +103,8 @@ class Genetic():
             probability = fitness_score / fitness_score_sum
             weights.append(probability)
 
-            print(population[i], "| Score:", str(fitness_score) + " (" + f"{probability * 100:.2f}" + "%)")
+            print(population[i], "| Score:", str(fitness_score) + 
+                  " (" + f"{probability * 100:.2f}" + "%)")
         print("\n")
 
         return weights
@@ -101,7 +116,12 @@ class Genetic():
             fitness_score_sum += self.fitness_fn(p)
         return fitness_score_sum
 
-# Computes the number of satisfied constraints for a given state
+
+"""
+Outside of class definition
+"""
+
+# Sums the number of satisfied constraints for a given state
 def num_satisfied_constraints(state) -> int:
     return ( 
         (state["A"] > state["G"]) + 
@@ -133,5 +153,5 @@ state8 = {"A":3, "B":4, "C":3, "D":4, "E":3, "F":4, "G":3, "H":4}
 initial_population = [state1, state2, state3, state4, state5, state6, state7, state8]
 
 algorithm = Genetic(num_satisfied_constraints) # Initialize fitness function
-algorithm.create_n_generations(initial_population, 5) # Generate 5 generations given an initial population
+algorithm.create_n_generations(initial_population, 5)
 
